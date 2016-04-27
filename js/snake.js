@@ -10,11 +10,10 @@ function init() {
         // Check if the canvas is not the same size.
         if (canvas.width  != displayWidth ||
             canvas.height != displayHeight) {
-
-        // Make the canvas the same size
-        canvas.width  = displayWidth;
-        canvas.height = displayHeight;
-  }
+            // Make the canvas the same size
+            canvas.width  = displayWidth;
+            canvas.height = displayHeight;
+        }
     }
 
 	// Create random number between 0 and settings.maxX or settings.maxY in game grid for random positioning
@@ -22,12 +21,6 @@ function init() {
 		// Generate random number between 0 and canvas width/height;
         var randomNumber = Math.floor(Math.random() * max);
         return randomNumber;
-    }
-
-    // select random position in grid
-    function selectRandomPosition(x, y){
-        var newPosition = grid[x][y];
-        return newPosition;
     }
 
     // Clear grid
