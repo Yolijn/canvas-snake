@@ -3,37 +3,49 @@ function init() {
 
 	// Function to set JS canvas to Client canvas size
     function resize(canvas) {
+        // Lookup the size the browser is displaying the canvas.
         var displayWidth  = canvas.clientWidth;
         var displayHeight = canvas.clientHeight;
 
-		// Check if the canvas is not the same size.
-        if (canvas.width  != displayWidth || canvas.height != displayHeight) {
-            // Make the canvas the same size
-            canvas.width  = displayWidth;
-            canvas.height = displayHeight;
-        }
+        // Check if the canvas is not the same size.
+        if (canvas.width  != displayWidth ||
+            canvas.height != displayHeight) {
+
+        // Make the canvas the same size
+        canvas.width  = displayWidth;
+        canvas.height = displayHeight;
+  }
     }
 
 	// Create random number between 0 and settings.maxX or settings.maxY in game grid for random positioning
-    function randomPos(max){
-
+    function randomNumber(max){
 		// Generate random number between 0 and canvas width/height;
         var randomNumber = Math.floor(Math.random() * max);
-
         return randomNumber;
     }
 
     // select random position in grid
     function selectRandomPosition(x, y){
-        var randomX = randomPos(x);
-        var randomY = randomPos(y);
-        return [randomX, randomY];
+        var newPosition = grid[x][y];
+        return newPosition;
     }
 
     // Clear grid
     function clearCanvas(){
         // Remove old gridblocks
         context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // Initialise empty grid
+    function initGrid(){
+        for ( var x = 0; x < gridWidth; x++ ){
+            var gridArray = [];
+            for ( var y = 0; y < gridHeight; y++ ){
+                gridArray.push(false);
+            }
+            // An array with a false value for each height/widt combination
+            grid.push(gridArray);
+        }
     }
 
     // Draw gridblocks
@@ -44,7 +56,7 @@ function init() {
 
                 var thisGridBlock = grid[x][y];
                 if (thisGridBlock){
-
+                    context.fillStyle = settings.color;
                     // context.fillStyle = "rgb(" + [randomPos(255), randomPos(255), randomPos(255)] + ")";
                     context.fillRect(
                         // Set x position
@@ -61,219 +73,106 @@ function init() {
         }
     }
 
-    function calculateGrid(){
-        // Set grid to true when gridBlock is contains snake
-        for ( var i = 0; i < snake.snakeSize; i++ ){
-            var oldHead = snake.head.current;
-            var head = snake.head.new;
-            var direction = snake.move.map( function(v){
-                return v * i;
+    // Find grid position of all snake blocks
+    function findSnake(head, direction, length){
+        var newPosition = snake.new;
+        var snakeHead = snake.head.gridPosition;
+
+        // Set old snake coordinates to current coordinates
+        snake.old = newPosition;
+        // Set snakeHead to given head value
+        snakeHead = head;
+
+        // Set position for each snakeBlock, counting from the head
+        for ( var i = 0; i < snake.size; i++ ){
+            //Direction to retract, get 0 if it's the head
+            var retract = direction.map(function(direction){
+                return direction * i;
             });
+            // Find block X by retracting direction
+            var blockX = head[X] - retract[X];
+            var blockY = head[Y] - retract[Y];
+            // Add these coordinates to snake.new
+            newPosition.push([blockX, blockY]);
+        }
+    }
 
-            var oldX = oldHead[X] - direction[X];
-            var oldY = oldHead[Y] - direction[Y];
-            var positionX = head[X] - direction[X];
-            var positionY = head[Y] - direction[Y];
+    function calculateGrid(){
 
-            // TODO: check if position is already true
-                // TODO: if position is true, check if it is the random block
-                    // TODO: if it is the random block, eat it
-                    // TODO: otherwise gameOver = true
+        // Create random foodBlock
+        var randomX, randomY, counter = 0;
+        do {
+            var randomX = randomNumber(gridWidth);
+            var randomY = randomNumber(gridHeight);
+            counter++;
+        } while ( !grid[randomX][randomY] && counter < 2);
 
+        // Reset counter for next time and set foodBlock
+        counter = 0;
+        grid[randomX][randomY] = true;
 
-            // set snake position in grid
-            console.log("Clear this flag: ", oldX, oldY)
-            grid[oldX][oldY] = false;
-            grid[positionX][positionY] = true;
-            console.log(grid[positionX][positionY]);
+        // Remove old snake
+        for ( var i = 0; i < snake.old.length; i++ ){
+            var old = snake.old[i];
+            grid[old[X]][old[Y]] = false;
         }
 
-        console.log(grid.map(function (axis) {
-            return axis.map(function (flag) {
-                return flag ? "#" : " ";
-            }).join('');
-        }).join('\n'));
+        // Set new snake
+        for ( var i = 0; i < snake.new.length; i++ ){
+            var current = snake.new[i];
+            grid[current[X]][current[Y]] = true;
+        }
     }
-        var counter = 0;
 
     // Function for movement of the snake
     function refreshCanvas(timeStamp){
-        var start = timeStamp;
-        var newPosition = snake.head.new;
-        var width = canvasWidth / settings.blockSize;
-        var height = canvasHeight / settings.blockSize;
-        var canvas = [width, height];
-        var newX, newY, rest;
 
-        newX = newPosition[X] - snake.move[X];
-        newY = newPosition[Y] - snake.move[Y];
-
-        if (newX > canvas[X]){
-            rest = newX - canvas[X];
-            console.log(newX, rest, "too big!");
-        }
-        else if (newY > canvas[Y]){
-            rest = newY - canvas[Y];
-            console.log(newY, rest, "too big!");
-        }
-        else {
-            console.log("yay");
-            snake.head.current = newPosition;
-            newPosition[X] = newX;
-            newPosition[Y] = newY;
-        }
-
-        // console.log(newX, newY);
-
-        clearCanvas();
         calculateGrid();
+        clearCanvas();
         drawGrid(grid, settings.blockSize);
-        // console.log(JSON.stringify(grid));
 
-        if (counter > 5) {
-            gameOver = true;
-        }
-
-        //Do the whole thing again
-        if ( !gameOver ){
-            counter++;
+        // Refresh until gameOver
+        if ( gameOver ){
             window.requestAnimationFrame(refreshCanvas);
         }
     }
 
 	// Game
     function startGame(){
-		// TODO: use lodash for mixins, for definition of settings when calling function
-        settings = {
-            blockSize: 10,
-            nrOfBlocks: 1,
-            snakeSize: 10,
-            gameColor: "#000042",
-            speed: "slow"
-        };
-
-        var gridBlock = settings.blockSize;
-        var speed = {
-            slow: 15,
-            medium: 8,
-            fast: 3
-        };
-        var startX = 0;
+        var startX = settings.size - 1;
         var startY = 1;
-
-        // Provide global snake object with start values
         snake = {
-            move: LEFT,
-            snakeSize: settings.snakeSize,
             head: {
-                // current position in grid [x, y]
-                current: [startX + settings.snakeSize, startY],
-                // new position in grid [x, y]
-                new: [startX + settings.snakeSize, startY]
-            }
+                gridPosition: [startX, startY],
+                fitsGrid: true
+            },
+            old: [],
+            new: [],
+            direction: settings.direction,
+            size: settings.size
         };
 
         gameOver = false;
-
-        // Find amount of gridBlocks for x and y axis
-        var gridX = Math.floor(canvasWidth / gridBlock);
-        var gridY = Math.floor(canvasHeight / gridBlock);
-
-        // Generate (false = empty) grid in 2D array
-        for ( var x = 0; x < gridX; x++ ){
-            var gridWidth = [];
-            for ( var y = 0; y < gridY; y++ ){
-                gridWidth.push(false);
-            }
-            grid.push(gridWidth);
-        }
-
-        // Set one random grid[x][y] to true for each settings.nrOfBlocks
-        for ( var i = 0; i < settings.nrOfBlocks; i++ ){
-
-            var randomX, randomY;
-            var treshold = gridX * gridY;
-            // Create random x and y value for a false grid[x][y]
-            do {
-                var tried = 0;
-                var randomPosition = selectRandomPosition(gridX, gridY);
-                randomX = randomPosition[0];
-                randomY = randomPosition[1];
-                tried++;
-
-                if ( tried > treshold ){
-                    throw new Error("randomNumber exceeded 10, error!");
-                }
-
-            } while ( grid[randomX][randomY] === true);
-
-            // Set one gridBlock to true
-            grid[randomX][randomY] = true;
-        }
-
-		// Set color for game components
-        context.fillStyle = settings.gameColor;
-
-		// TODO: draw block for each grid[x][y] = true
-
-   //      }
-
-		// Create snake at start position
-		// context.fillRect(0, grid, grid * settings.snakeSize, grid)
-
-		// Move snake continuously with delay defined by speed
-		// moveSnake();
-
-			// If !moveOnYaxis AND !reverse
-				// move snake from x = 0 to x = canvasWidth
-				// When snake reaches end of canvas: start again at x = 0
-
-			// If !moveOnYaxis AND reverse is set to true
-				// move snake from x = canvasWidth to x = 0
-				// When snake reaches end of canvas: start again at x = canvasWidth
-
-			// If moveOnYaxis is set to true AND !reverse
-				// move snake from y = 0 to y = canvasHeight
-				// When snake reaches end of canvas: start again at y = 0
-
-			// If moveOnYaxis is set to true AND reverse is set to true
-				// move snake from y = canvasHeight to y = 0
-				// When snake reaches end of canvas: start again at y = canvasHeight
-
-		// Set eventListener for keyUp
-
-			// When arrow key up (keycode 38) is pressed AND !moveOnYaxis
-				// Set reverse to true
-				// Set moveOnYaxis to true
-
-			// When arrow key down (keycode 40) is pressed AND !moveOnYaxis
-				// Set reverse to false
-				// Set moveOnYaxis to true
-
-			// When arrow key left (keycode 37) is pressed AND moveOnYaxis is true
-				// Set reverse to true
-				// Set moveOnYaxis to false
-
-			// When arrow key right (keycode 39) is pressed AND moveOnYaxis is true
-				// Set reverse to false
-				// Set moveOnYaxis to false
-            // Set recurring function/animation for rerendering grid
+        initGrid();
+        findSnake(snake.head.gridPosition, snake.direction, snake.size);
         window.requestAnimationFrame(refreshCanvas);
     }
+
     // Set axis and direction for movement [directionX, directionY]
     var UP = [0, -1], DOWN = [0, 1],  LEFT = [-1, 0],  RIGHT = [1, 0];
     var X = 0, Y = 1;
     var grid = [];
-    var settings, snake, gameOver;
+    var snake, gameOver;
+    var settings = { blockSize: 10, speed: 0, size: 10, direction: RIGHT, color: "#000042" };
     var canvas = document.getElementById("canvas");
     var context = canvas.getContext("2d");
     var canvasWidth = canvas.clientWidth;
     var canvasHeight = canvas.clientHeight;
-
+    var gridWidth = canvasWidth / settings.blockSize;
+    var gridHeight = canvasHeight / settings.blockSize;
 
 	// Set canvas
     resize(canvas);
-
 	// Start Game
     startGame();
 }
