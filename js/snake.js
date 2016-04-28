@@ -66,13 +66,29 @@ function init() {
         }
     }
 
+    // Move snake
+    function moveSnake(speed){
+        var headPosition = snake.head.gridPosition;
+        var direction = snake.direction;
+        var move = [0,0];
+
+        // Calculate new head position by adding direction * speed
+        move[X] = headPosition[X] + ( direction[X] * speed );
+        move[Y] = headPosition[Y] + ( direction[Y] * speed );
+
+        snake.head.gridPosition = move;
+
+        findSnake(move, direction, snake.size);
+    };
+
     // Find grid position of all snake blocks
     function findSnake(head, direction, length){
-        var newPosition = snake.new;
         var snakeHead = snake.head.gridPosition;
 
         // Set old snake coordinates to current coordinates
-        snake.old = newPosition;
+        snake.old = snake.new;
+        // Remove old coordinates from current
+        snake.new = [];
         // Set snakeHead to given head value
         snakeHead = head;
 
@@ -86,23 +102,28 @@ function init() {
             var blockX = head[X] - retract[X];
             var blockY = head[Y] - retract[Y];
             // Add these coordinates to snake.new
-            newPosition.push([blockX, blockY]);
+            snake.new.push([blockX, blockY]);
         }
     }
 
     function calculateGrid(){
+        var foodBlock = snake.foodBlock;
+        // Create random foodBlock if non exists
+        if (!foodBlock){
+            var randomX, randomY, counter = 0;
+            do {
+                var randomX = randomNumber(gridWidth);
+                var randomY = randomNumber(gridHeight);
+                counter++;
+            } while ( !grid[randomX][randomY] && counter < 2);
 
-        // Create random foodBlock
-        var randomX, randomY, counter = 0;
-        do {
-            var randomX = randomNumber(gridWidth);
-            var randomY = randomNumber(gridHeight);
-            counter++;
-        } while ( !grid[randomX][randomY] && counter < 2);
-
-        // Reset counter for next time and set foodBlock
-        counter = 0;
-        grid[randomX][randomY] = true;
+            // Reset counter for next time and set foodBlock
+            counter = 0;
+            grid[randomX][randomY] = true;
+            foodBlock = [randomX, randomY];
+            // Set current foodBlock value to snake
+            snake.foodBlock = foodBlock;
+        }
 
         // Remove old snake
         for ( var i = 0; i < snake.old.length; i++ ){
@@ -120,12 +141,13 @@ function init() {
     // Function for movement of the snake
     function refreshCanvas(timeStamp){
 
+        moveSnake(snake.speed);
         calculateGrid();
         clearCanvas();
         drawGrid(grid, settings.blockSize);
 
         // Refresh until gameOver
-        if ( gameOver ){
+        if ( !gameOver ){
             window.requestAnimationFrame(refreshCanvas);
         }
     }
@@ -141,8 +163,10 @@ function init() {
             },
             old: [],
             new: [],
+            footblock: undefined,
             direction: settings.direction,
-            size: settings.size
+            size: settings.size,
+            speed: settings.speed
         };
 
         gameOver = false;
@@ -156,7 +180,7 @@ function init() {
     var X = 0, Y = 1;
     var grid = [];
     var snake, gameOver;
-    var settings = { blockSize: 10, speed: 0, size: 10, direction: RIGHT, color: "#000042" };
+    var settings = { blockSize: 10, speed: 1, size: 10, direction: RIGHT, color: "#000042" };
     var canvas = document.getElementById("canvas");
     var context = canvas.getContext("2d");
     var canvasWidth = canvas.clientWidth;
