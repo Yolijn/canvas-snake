@@ -66,7 +66,10 @@ function init() {
         }
     }
 
-    // Move snake
+    /**
+     * Move snake
+     * @param {Vector2} direction
+     */
     function move(direction){
         var speed = snake.speed;
         var headPosition = snake.head.gridPosition;
@@ -79,6 +82,11 @@ function init() {
                 x: headPosition.x + ( direction.x * speed ),
                 y: headPosition.y + ( direction.y * speed )
             };
+
+            move.x %= gridWidth;
+            move.y %= gridHeight;
+            // if (move.x == gridWidth)
+                // move.x = 0;
 
             if ( grid[move.x] != undefined && grid[move.x][move.y] != undefined ){
                 snake.head.gridPosition = move; //[move.x, move.y];
@@ -126,17 +134,20 @@ function init() {
 
         // Set position for each snakeBlock, counting from the head
         for ( var i = 0; i < snake.size; i++ ){
-            //Direction to retract, get 0 if it's the head
-            // var retract = direction.map(function(direction){
-            //     return direction * i;
-            // });
+            // Direction to retract, get 0 if it's the head
             var retract = {
                 x: direction.x * i,
                 y: direction.y * i
             };
+
             // Find block X by retracting direction
             var blockX = head.x - retract.x;
             var blockY = head.y - retract.y;
+
+            if (blockX < 0)
+                blockX = gridWidth + blockX % gridWidth;
+            if (blockY < 0)
+                blockY = gridHeight + blockY % gridHeight;
             // Add these coordinates to snake.new
             snake.new.push({ x: blockX, y: blockY });
         }
@@ -172,6 +183,8 @@ function init() {
         // Set new snake
         for ( i = 0; i < snake.new.length; i++ ){
             var current = snake.new[i];
+            if (!grid[current.x])
+                console.log("X doesn't exist in grid: ", current.x)
             grid[current.x][current.y] = true;
         }
     }
@@ -186,10 +199,11 @@ function init() {
             drawGrid(grid, settings.blockSize);
             snake.changedDirection = false;
         }
+
         move(snake.direction);
-            calculateGrid();
-            clearCanvas();
-            drawGrid(grid, settings.blockSize);
+        calculateGrid();
+        clearCanvas();
+        drawGrid(grid, settings.blockSize);
 
         // Refresh until gameOver
         if ( !gameOver ){
@@ -207,7 +221,10 @@ function init() {
         snake = {
             head: {
                 // @type {Vector2}
-                gridPosition: { x: 10, y: 0 },
+                gridPosition: {
+                    x: Math.round(gridWidth / 2),
+                    y: Math.round(gridHeight/ 2)
+                },
                 fitsGrid: true
             },
             // @type {Array<Vector2>}
@@ -215,6 +232,7 @@ function init() {
             // @type {Array<Vector2>}
             new: [],
             footblock: undefined,
+            // @type {Vector2}
             direction: settings.direction,
             changedDirection: false,
             size: settings.size,
@@ -231,30 +249,30 @@ function init() {
                 ARR_DOWN = 40;
 
             // LEFT arrow key is pressed and released
-            if ( event.keyCode == ARR_LEFT ){
+            if ( event.keyCode === ARR_LEFT ){
                 console.log("move left");
                 snake.direction = LEFT;
                 snake.changedDirection = true;
             }
             // UP arrow key is pressed and released
-            else if ( event.keyCode == ARR_UP ){
+            else if ( event.keyCode === ARR_UP ){
                 console.log("move up");
                 snake.direction = UP;
                 snake.changedDirection = true;
             }
             // RIGHT arrow key is pressed and released
-            else if ( event.keyCode == ARR_RIGHT ){
+            else if ( event.keyCode === ARR_RIGHT ){
                 console.log("move right");
                 snake.direction = RIGHT;
                 snake.changedDirection = true;
             }
             // DOWN arrow key is pressed and released
-            else if ( event.keyCode == ARR_DOWN ){
+            else if ( event.keyCode === ARR_DOWN ){
                 console.log("move down");
                 snake.direction = DOWN;
                 snake.changedDirection = true;
             }
-        })
+        });
 
         gameOver = false;
         initGrid();
@@ -270,7 +288,13 @@ function init() {
 
     var grid = [];
     var snake, gameOver;
-    var settings = { blockSize: 10, speed: 1, size: 10, direction: DOWN, color: "#000042" };
+    var settings = {
+        blockSize: 10,
+        speed: 1,
+        size: 10,
+        direction: RIGHT,
+        color: "#000042"
+    };
     var canvas = document.getElementById("canvas");
     var context = canvas.getContext("2d");
     var canvasWidth = canvas.clientWidth;
