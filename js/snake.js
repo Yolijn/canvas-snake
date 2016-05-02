@@ -67,23 +67,56 @@ function init() {
     }
 
     // Move snake
-    function moveSnake(speed){
+    function move(direction){
+        var speed = snake.speed;
         var headPosition = snake.head.gridPosition;
-        var direction = snake.direction;
-        var move = [0,0];
+        var move = [X,Y];
+        var route = snake.route;
+        var direction = direction;
 
-        // Calculate new head position by adding direction * speed
-        move[X] = headPosition[X] + ( direction[X] * speed );
-        move[Y] = headPosition[Y] + ( direction[Y] * speed );
+        // If no new coordinates in path, snake.recalculate will be false
+        if ( !snake.recalculate ){
+            // Calculate new head position by adding direction * speed
+            move[X] = headPosition[X] + ( direction[X] * speed );
+            move[Y] = headPosition[Y] + ( direction[Y] * speed );
+            if ( grid[move[X]] != undefined && grid[move[X]][move[Y]] != undefined ){
+                console.log(move[X], move[Y]);
+                snake.head.gridPosition = move;
+                findSnake(move);
+            }
+            else if ( move[X] >= grid.length ) {
+                snake.recalculate = true;
+                console.log("X to big: " + move[X]);
+            }
+            else if ( move[X] < 0 ){
+                snake.recalculate = true;
+                console.log("X to small: " + move[X]);
+            }
+            else if ( move[Y] >= grid[X].length ){
+                snake.recalculate = true;
+                console.log("Y to big: " + move[Y]);
+            }
+            else if ( move[Y] < 0 ){
+                snake.recalculate = true;
+                console.log("Y to small: " + move[Y]);
+            }
+            else {
+                console.log(move[X], move[Y]);
+            }
+        }
+        else {
+            // recalculate snake
 
-        snake.head.gridPosition = move;
+        }
 
-        findSnake(move, direction, snake.size);
     };
 
     // Find grid position of all snake blocks
-    function findSnake(head, direction, length){
+    function findSnake(head){
         var snakeHead = snake.head.gridPosition;
+        var direction = snake.direction;
+        var route = snake.route;
+        var snakeLength = snake.size;
 
         // Set old snake coordinates to current coordinates
         snake.old = snake.new;
@@ -139,12 +172,19 @@ function init() {
     }
 
     // Function for movement of the snake
-    function refreshCanvas(timeStamp){
-
-        moveSnake(snake.speed);
-        calculateGrid();
-        clearCanvas();
-        drawGrid(grid, settings.blockSize);
+    function refreshCanvas(){
+        if (snake.changedDirection){
+            console.log("changedDirection");
+            move(snake.direction);
+            calculateGrid();
+            clearCanvas();
+            drawGrid(grid, settings.blockSize);
+            snake.changedDirection = false;
+        }
+        move(snake.direction);
+            calculateGrid();
+            clearCanvas();
+            drawGrid(grid, settings.blockSize);
 
         // Refresh until gameOver
         if ( !gameOver ){
@@ -165,13 +205,43 @@ function init() {
             new: [],
             footblock: undefined,
             direction: settings.direction,
+            changedDirection: false,
             size: settings.size,
-            speed: settings.speed
+            speed: settings.speed,
+            route:[],
+            recalculate: false
         };
+
+        document.addEventListener("keyup", function(event){
+            // LEFT arrow key is pressed and released
+            if ( event.keyCode == 37 ){
+                console.log("move left");
+                snake.direction = LEFT;
+                snake.changedDirection = true;
+            }
+            // UP arrow key is pressed and released
+            else if ( event.keyCode == 38 ){
+                console.log("move up");
+                snake.direction = UP;
+                snake.changedDirection = true;
+            }
+            // RIGHT arrow key is pressed and released
+            else if ( event.keyCode == 39 ){
+                console.log("move right");
+                snake.direction = RIGHT;
+                snake.changedDirection = true;
+            }
+            // DOWN arrow key is pressed and released
+            else if ( event.keyCode == 40 ){
+                console.log("move down");
+                snake.direction = DOWN;
+                snake.changedDirection = true;
+            }
+        })
 
         gameOver = false;
         initGrid();
-        findSnake(snake.head.gridPosition, snake.direction, snake.size);
+        findSnake(snake.head.gridPosition);
         window.requestAnimationFrame(refreshCanvas);
     }
 
@@ -180,7 +250,7 @@ function init() {
     var X = 0, Y = 1;
     var grid = [];
     var snake, gameOver;
-    var settings = { blockSize: 10, speed: 1, size: 10, direction: RIGHT, color: "#000042" };
+    var settings = { blockSize: 10, speed: 1, size: 10, direction: DOWN, color: "#000042" };
     var canvas = document.getElementById("canvas");
     var context = canvas.getContext("2d");
     var canvasWidth = canvas.clientWidth;
