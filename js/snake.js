@@ -70,50 +70,49 @@ function init() {
     function move(direction){
         var speed = snake.speed;
         var headPosition = snake.head.gridPosition;
-        var move = [X,Y];
-        var route = snake.route;
-        var direction = direction;
+        var move;
 
         // If no new coordinates in path, snake.recalculate will be false
         if ( !snake.recalculate ){
             // Calculate new head position by adding direction * speed
-            move[X] = headPosition[X] + ( direction[X] * speed );
-            move[Y] = headPosition[Y] + ( direction[Y] * speed );
-            if ( grid[move[X]] != undefined && grid[move[X]][move[Y]] != undefined ){
-                console.log(move[X], move[Y]);
-                snake.head.gridPosition = move;
-                findSnake(move);
+            move = {
+                x: headPosition.x + ( direction.x * speed ),
+                y: headPosition.y + ( direction.y * speed )
+            };
+
+            if ( grid[move.x] != undefined && grid[move.x][move.y] != undefined ){
+                snake.head.gridPosition = move; //[move.x, move.y];
+                findSnake(snake.head.gridPosition);
             }
-            else if ( move[X] >= grid.length ) {
+            else if ( move.x >= grid.length ) {
                 snake.recalculate = true;
-                console.log("X to big: " + move[X]);
+                // console.log("X too big: " + move.x);
             }
-            else if ( move[X] < 0 ){
+            else if ( move.x < 0 ){
                 snake.recalculate = true;
-                console.log("X to small: " + move[X]);
+                // console.log("X too small: " + move.x);
             }
-            else if ( move[Y] >= grid[X].length ){
+            else if ( move.y >= grid[0].length ){
                 snake.recalculate = true;
-                console.log("Y to big: " + move[Y]);
+                // console.log("Y too big: " + move.y);
             }
-            else if ( move[Y] < 0 ){
+            else if ( move.y < 0 ){
                 snake.recalculate = true;
-                console.log("Y to small: " + move[Y]);
+                // console.log("Y too small: " + move.y);
             }
             else {
-                console.log(move[X], move[Y]);
+                // console.log(move.x, move.y);
             }
         }
         else {
             // recalculate snake
 
         }
-
-    };
+    }
 
     // Find grid position of all snake blocks
     function findSnake(head){
-        var snakeHead = snake.head.gridPosition;
+        // var snakeHead = ;
         var direction = snake.direction;
         var route = snake.route;
         var snakeLength = snake.size;
@@ -123,19 +122,23 @@ function init() {
         // Remove old coordinates from current
         snake.new = [];
         // Set snakeHead to given head value
-        snakeHead = head;
+        snake.head.gridPosition = head;
 
         // Set position for each snakeBlock, counting from the head
         for ( var i = 0; i < snake.size; i++ ){
             //Direction to retract, get 0 if it's the head
-            var retract = direction.map(function(direction){
-                return direction * i;
-            });
+            // var retract = direction.map(function(direction){
+            //     return direction * i;
+            // });
+            var retract = {
+                x: direction.x * i,
+                y: direction.y * i
+            };
             // Find block X by retracting direction
-            var blockX = head[X] - retract[X];
-            var blockY = head[Y] - retract[Y];
+            var blockX = head.x - retract.x;
+            var blockY = head.y - retract.y;
             // Add these coordinates to snake.new
-            snake.new.push([blockX, blockY]);
+            snake.new.push({ x: blockX, y: blockY });
         }
     }
 
@@ -145,8 +148,8 @@ function init() {
         if (!foodBlock){
             var randomX, randomY, counter = 0;
             do {
-                var randomX = randomNumber(gridWidth);
-                var randomY = randomNumber(gridHeight);
+                randomX = randomNumber(gridWidth);
+                randomY = randomNumber(gridHeight);
                 counter++;
             } while ( !grid[randomX][randomY] && counter < 2);
 
@@ -158,16 +161,18 @@ function init() {
             snake.foodBlock = foodBlock;
         }
 
+        var i;
+
         // Remove old snake
-        for ( var i = 0; i < snake.old.length; i++ ){
+        for ( i = 0; i < snake.old.length; i++ ){
             var old = snake.old[i];
-            grid[old[X]][old[Y]] = false;
+            grid[old.x][old.y] = false;
         }
 
         // Set new snake
-        for ( var i = 0; i < snake.new.length; i++ ){
+        for ( i = 0; i < snake.new.length; i++ ){
             var current = snake.new[i];
-            grid[current[X]][current[Y]] = true;
+            grid[current.x][current.y] = true;
         }
     }
 
@@ -192,47 +197,59 @@ function init() {
         }
     }
 
+    /** @typedef {{ x: Number, y: Number }} */
+    var Vector2;
+
 	// Game
     function startGame(){
         var startX = settings.size - 1;
         var startY = 1;
         snake = {
             head: {
-                gridPosition: [startX, startY],
+                // @type {Vector2}
+                gridPosition: { x: 10, y: 0 },
                 fitsGrid: true
             },
+            // @type {Array<Vector2>}
             old: [],
+            // @type {Array<Vector2>}
             new: [],
             footblock: undefined,
             direction: settings.direction,
             changedDirection: false,
             size: settings.size,
             speed: settings.speed,
-            route:[],
+            // @type {Array<Vector2>}
+            route: [],
             recalculate: false
         };
 
         document.addEventListener("keyup", function(event){
+            var ARR_LEFT = 37,
+                ARR_UP = 38,
+                ARR_RIGHT = 39,
+                ARR_DOWN = 40;
+
             // LEFT arrow key is pressed and released
-            if ( event.keyCode == 37 ){
+            if ( event.keyCode == ARR_LEFT ){
                 console.log("move left");
                 snake.direction = LEFT;
                 snake.changedDirection = true;
             }
             // UP arrow key is pressed and released
-            else if ( event.keyCode == 38 ){
+            else if ( event.keyCode == ARR_UP ){
                 console.log("move up");
                 snake.direction = UP;
                 snake.changedDirection = true;
             }
             // RIGHT arrow key is pressed and released
-            else if ( event.keyCode == 39 ){
+            else if ( event.keyCode == ARR_RIGHT ){
                 console.log("move right");
                 snake.direction = RIGHT;
                 snake.changedDirection = true;
             }
             // DOWN arrow key is pressed and released
-            else if ( event.keyCode == 40 ){
+            else if ( event.keyCode == ARR_DOWN ){
                 console.log("move down");
                 snake.direction = DOWN;
                 snake.changedDirection = true;
@@ -246,8 +263,11 @@ function init() {
     }
 
     // Set axis and direction for movement [directionX, directionY]
-    var UP = [0, -1], DOWN = [0, 1],  LEFT = [-1, 0],  RIGHT = [1, 0];
-    var X = 0, Y = 1;
+    var UP = { x: 0, y: -1 },
+        DOWN = { x: 0, y: 1 },
+        LEFT = { x: -1, y: 0 },
+        RIGHT = { x: 1, y: 0 };
+
     var grid = [];
     var snake, gameOver;
     var settings = { blockSize: 10, speed: 1, size: 10, direction: DOWN, color: "#000042" };
