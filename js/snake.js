@@ -177,33 +177,45 @@ function init() {
         // Remove old snake
         for ( i = 0; i < snake.old.length; i++ ){
             var old = snake.old[i];
-            grid[old.x][old.y] = false;
+            grid[old.x | 0][old.y | 0] = false;
         }
 
         // Set new snake
         for ( i = 0; i < snake.new.length; i++ ){
             var current = snake.new[i];
-            if (!grid[current.x])
+            if (!grid[current.x | 0])
                 console.log("X doesn't exist in grid: ", current.x)
-            grid[current.x][current.y] = true;
+            grid[current.x | 0][current.y | 0] = true;
         }
     }
 
     // Function for movement of the snake
-    function refreshCanvas(){
-        if (snake.changedDirection){
-            console.log("changedDirection");
-            move(snake.direction);
-            calculateGrid();
-            clearCanvas();
-            drawGrid(grid, settings.blockSize);
-            snake.changedDirection = false;
-        }
-
-        move(snake.direction);
+    function refreshCanvas(renderTime){
+        var now = Date.now();
+        var progress = (now - snake.timeStamp) / 1000;
+        // newPosition = snake.offsetPosition.add(snake.direction.multiply(snake.speed * progress))
+        var newPosition = {
+            x: (snake.offsetPosition.x + progress * snake.speed * snake.direction.x),
+            y: (snake.offsetPosition.y + progress * snake.speed * snake.direction.y)
+        };
+        snake.head.gridPosition = newPosition;
+        findSnake(snake.head.gridPosition);
+        // TODO: Somehow use requestAnimationFrame timestamp in gameStart() function to set initial time
+        // Then we can stop using the slower and inaccurate Date.now()
         calculateGrid();
         clearCanvas();
         drawGrid(grid, settings.blockSize);
+
+        context.fillRect(
+            // Set x position
+            snake.head.gridPosition.x * settings.blockSize,
+            // Set y position
+            snake.head.gridPosition.y * settings.blockSize,
+            // Set width
+            settings.blockSize,
+            // Set height
+            settings.blockSize
+        );
 
         // Refresh until gameOver
         if ( !gameOver ){
@@ -211,8 +223,19 @@ function init() {
         }
     }
 
-    /** @typedef {{ x: Number, y: Number }} */
-    var Vector2;
+    /**
+     * @param {Vector2} direction
+     */
+    function go(direction, desc)
+    {
+        // TODO: Prevent moving in the current direction and prevent reversing: ergo, prevent moving on the same axis
+        console.log("move " + desc);
+        snake.offsetPosition = snake.head.gridPosition;
+        snake.direction = direction;
+        snake.changedDirection = true;
+        snake.timeStamp = Date.now();
+        snake.route.push(direction);
+    }
 
 	// Game
     function startGame(){
@@ -225,6 +248,7 @@ function init() {
                     x: Math.round(gridWidth / 2),
                     y: Math.round(gridHeight/ 2)
                 },
+                // TODO: Document this property
                 fitsGrid: true
             },
             // @type {Array<Vector2>}
@@ -232,6 +256,8 @@ function init() {
             // @type {Array<Vector2>}
             new: [],
             footblock: undefined,
+            // @type {Vector2} Coordinates where the direction was set the last time
+            offsetPosition: undefined,
             // @type {Vector2}
             direction: settings.direction,
             changedDirection: false,
@@ -239,8 +265,11 @@ function init() {
             speed: settings.speed,
             // @type {Array<Vector2>}
             route: [],
-            recalculate: false
+            recalculate: false,
+            timeStamp: undefined
         };
+
+        go(settings.direction);
 
         document.addEventListener("keyup", function(event){
             var ARR_LEFT = 37,
@@ -249,28 +278,20 @@ function init() {
                 ARR_DOWN = 40;
 
             // LEFT arrow key is pressed and released
-            if ( event.keyCode === ARR_LEFT ){
-                console.log("move left");
-                snake.direction = LEFT;
-                snake.changedDirection = true;
+            if ( event.keyCode === ARR_LEFT ) {
+                go(LEFT, "left");
             }
             // UP arrow key is pressed and released
             else if ( event.keyCode === ARR_UP ){
-                console.log("move up");
-                snake.direction = UP;
-                snake.changedDirection = true;
+                go(UP, "up");
             }
             // RIGHT arrow key is pressed and released
             else if ( event.keyCode === ARR_RIGHT ){
-                console.log("move right");
-                snake.direction = RIGHT;
-                snake.changedDirection = true;
+                go(RIGHT, "right");
             }
             // DOWN arrow key is pressed and released
             else if ( event.keyCode === ARR_DOWN ){
-                console.log("move down");
-                snake.direction = DOWN;
-                snake.changedDirection = true;
+                go(DOWN, "down");
             }
         });
 
@@ -279,6 +300,9 @@ function init() {
         findSnake(snake.head.gridPosition);
         window.requestAnimationFrame(refreshCanvas);
     }
+
+    /** @typedef {{ x: Number, y: Number }} */
+    var Vector2;
 
     // Set axis and direction for movement [directionX, directionY]
     var UP = { x: 0, y: -1 },
@@ -290,7 +314,7 @@ function init() {
     var snake, gameOver;
     var settings = {
         blockSize: 10,
-        speed: 1,
+        speed: 8,
         size: 10,
         direction: RIGHT,
         color: "#000042"
